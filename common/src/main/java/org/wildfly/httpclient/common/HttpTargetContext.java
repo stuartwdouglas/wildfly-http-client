@@ -19,7 +19,6 @@
 package org.wildfly.httpclient.common;
 
 import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInput;
@@ -40,7 +39,6 @@ import org.jboss.marshalling.Unmarshaller;
 import org.jboss.marshalling.river.RiverMarshallerFactory;
 import org.xnio.channels.Channels;
 import org.xnio.streams.ChannelInputStream;
-import org.xnio.streams.ChannelOutputStream;
 import io.undertow.client.ClientCallback;
 import io.undertow.client.ClientExchange;
 import io.undertow.client.ClientRequest;
@@ -132,7 +130,7 @@ public class HttpTargetContext extends AbstractAttachable {
     }
 
     public void sendRequestInternal(final HttpConnectionPool.ConnectionHandle connection, ClientRequest request, HttpMarshaller httpMarshaller, HttpResultHandler httpResultHandler, HttpFailureHandler failureHandler, ContentType expectedResponse, Runnable completedTask, boolean allowNoContent, boolean retry) {
-
+        long start = System.currentTimeMillis();
         final boolean authAdded = retry || connection.getAuthenticationContext().prepareRequest(connection.getUri(), request);
         request.getRequestHeaders().put(Headers.HOST, connection.getUri().getHost());
         if (request.getRequestHeaders().contains(Headers.CONTENT_TYPE)) {
@@ -285,12 +283,11 @@ public class HttpTargetContext extends AbstractAttachable {
                 if (httpMarshaller != null) {
                     //marshalling is blocking, we need to delegate, otherwise we may need to buffer arbitrarily large requests
                     connection.getConnection().getWorker().execute(() -> {
-                        try (OutputStream outputStream = new BufferedOutputStream(new ChannelOutputStream(result.getRequestChannel()))) {
+                        try (OutputStream outputStream = new ClientOutputStream(result, start)) {
 
                             // marshall the locator and method params
                             // start the marshaller
                             httpMarshaller.marshall(outputStream);
-
                         } catch (Exception e) {
                             try {
                                 failureHandler.handleFailure(e);

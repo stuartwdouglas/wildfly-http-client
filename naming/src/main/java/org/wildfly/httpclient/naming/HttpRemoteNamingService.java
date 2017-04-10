@@ -46,6 +46,7 @@ import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import io.undertow.util.PathTemplateMatch;
 import io.undertow.util.StatusCodes;
+import org.wildfly.httpclient.common.NoFlushByteOutput;
 
 /**
  * @author Stuart Douglas
@@ -229,7 +230,7 @@ public class HttpRemoteNamingService {
         final MarshallingConfiguration marshallingConfiguration = new MarshallingConfiguration();
         marshallingConfiguration.setVersion(2);
         Marshaller marshaller = MARSHALLER_FACTORY.createMarshaller(marshallingConfiguration);
-        marshaller.start(new OutputStreamByteOutput(exchange.getOutputStream()));
+        marshaller.start(new NoFlushByteOutput(new OutputStreamByteOutput(exchange.getOutputStream())));
         marshaller.writeObject(result);
         marshaller.finish();
     }
@@ -244,7 +245,7 @@ public class HttpRemoteNamingService {
         OutputStream outputStream = exchange.getOutputStream();
         final ByteOutput byteOutput = Marshalling.createByteOutput(outputStream);
         // start the marshaller
-        marshaller.start(byteOutput);
+        marshaller.start(new NoFlushByteOutput(byteOutput));
         marshaller.writeObject(e);
         marshaller.write(0);
         marshaller.finish();

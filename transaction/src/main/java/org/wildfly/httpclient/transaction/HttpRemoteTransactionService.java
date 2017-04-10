@@ -37,6 +37,7 @@ import org.jboss.marshalling.river.RiverMarshallerFactory;
 import org.wildfly.common.function.ExceptionBiFunction;
 import org.wildfly.httpclient.common.ContentType;
 import org.wildfly.httpclient.common.ElytronIdentityHandler;
+import org.wildfly.httpclient.common.NoFlushByteOutput;
 import org.wildfly.transaction.client.ImportResult;
 import org.wildfly.transaction.client.LocalTransaction;
 import org.wildfly.transaction.client.LocalTransactionContext;
@@ -132,7 +133,7 @@ public class HttpRemoteTransactionService {
                 final Xid xid = xidResolver.apply(transaction);
                 final ByteArrayOutputStream out = new ByteArrayOutputStream();
                 Marshaller marshaller = MARSHALLER_FACTORY.createMarshaller(createMarshallingConf());
-                marshaller.start(new OutputStreamByteOutput(out));
+                marshaller.start(new NoFlushByteOutput(new OutputStreamByteOutput(out)));
                 marshaller.writeInt(xid.getFormatId());
                 marshaller.writeInt(xid.getGlobalTransactionId().length);
                 marshaller.write(xid.getGlobalTransactionId());
@@ -168,7 +169,7 @@ public class HttpRemoteTransactionService {
                 final Xid[] recoveryList = transactionContext.getRecoveryInterface().recover(flags, parentName);
                 final ByteArrayOutputStream out = new ByteArrayOutputStream();
                 Marshaller marshaller = MARSHALLER_FACTORY.createMarshaller(createMarshallingConf());
-                marshaller.start(new OutputStreamByteOutput(out));
+                marshaller.start(new NoFlushByteOutput(new OutputStreamByteOutput(out)));
                 marshaller.writeInt(recoveryList.length);
                 for (int i = 0; i < recoveryList.length; ++i) {
                     Xid xid = recoveryList[i];
@@ -265,7 +266,7 @@ public class HttpRemoteTransactionService {
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             final ByteOutput byteOutput = Marshalling.createByteOutput(outputStream);
             // start the marshaller
-            marshaller.start(byteOutput);
+            marshaller.start(new NoFlushByteOutput(byteOutput));
             marshaller.writeObject(e);
             marshaller.write(0);
             marshaller.finish();

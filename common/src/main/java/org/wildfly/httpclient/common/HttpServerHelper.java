@@ -50,7 +50,7 @@ public class HttpServerHelper {
             OutputStream outputStream = exchange.getOutputStream();
             final ByteOutput byteOutput = Marshalling.createByteOutput(outputStream);
             // start the marshaller
-            marshaller.start(byteOutput);
+            marshaller.start(new NoFlushByteOutput(byteOutput));
             marshaller.writeObject(e);
             marshaller.write(0);
             marshaller.finish();

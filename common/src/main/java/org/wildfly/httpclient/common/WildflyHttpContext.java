@@ -170,7 +170,7 @@ public class WildflyHttpContext implements Contextual<WildflyHttpContext> {
                 if (sb.getEagerlyAcquireSession() != null && sb.getEagerlyAcquireSession()) {
                     eager = true;
                 }
-                boolean http2 = this.enableHttp2 == null ? true : this.enableHttp2;
+                boolean http2 = this.enableHttp2 == null ? false : this.enableHttp2;
                 if(sb.getEnableHttp2() != null) {
                     http2 = sb.getEnableHttp2();
                 }

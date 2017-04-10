@@ -58,6 +58,7 @@ import org.jboss.marshalling.MarshallingConfiguration;
 import org.jboss.marshalling.Unmarshaller;
 import org.wildfly.httpclient.common.HttpConnectionPool;
 import org.wildfly.httpclient.common.HttpTargetContext;
+import org.wildfly.httpclient.common.NoFlushByteOutput;
 import org.wildfly.httpclient.common.WildflyHttpContext;
 import org.wildfly.httpclient.naming.HttpNamingProvider;
 import org.wildfly.httpclient.transaction.XidProvider;
@@ -168,7 +169,7 @@ class HttpEJBReceiver extends EJBReceiver {
         targetContext.sendRequest(connection, request, output -> {
                     MarshallingConfiguration config = createMarshallingConfig();
                     Marshaller marshaller = targetContext.createMarshaller(config);
-                    marshaller.start(Marshalling.createByteOutput(output));
+                    marshaller.start(new NoFlushByteOutput(Marshalling.createByteOutput(output)));
                     writeTransaction(ContextTransactionManager.getInstance().getTransaction(), marshaller, connection.getUri());
                     marshaller.finish();
                 },
@@ -339,7 +340,7 @@ class HttpEJBReceiver extends EJBReceiver {
 
         MarshallingConfiguration config = createMarshallingConfig();
         Marshaller marshaller = targetContext.createMarshaller(config);
-        marshaller.start(byteOutput);
+        marshaller.start(new NoFlushByteOutput(byteOutput));
         writeTransaction(clientInvocationContext.getTransaction(), marshaller, targetContext.getUri());
 
 

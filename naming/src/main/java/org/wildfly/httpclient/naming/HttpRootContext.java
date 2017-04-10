@@ -38,6 +38,7 @@ import org.jboss.marshalling.MarshallingConfiguration;
 import org.jboss.marshalling.Unmarshaller;
 import org.wildfly.httpclient.common.ContentType;
 import org.wildfly.httpclient.common.HttpTargetContext;
+import org.wildfly.httpclient.common.NoFlushByteOutput;
 import org.wildfly.httpclient.common.WildflyHttpContext;
 import org.wildfly.naming.client.AbstractContext;
 import org.wildfly.naming.client.CloseableNamingEnumeration;
@@ -260,7 +261,7 @@ public class HttpRootContext extends AbstractContext {
         targetContext.sendRequest(clientRequest, output -> {
             if (object != null) {
                 Marshaller marshaller = targetContext.createMarshaller(createMarshallingConfig());
-                marshaller.start(Marshalling.createByteOutput(output));
+                marshaller.start(new NoFlushByteOutput(Marshalling.createByteOutput(output)));
                 marshaller.writeObject(object);
                 marshaller.finish();
             }
