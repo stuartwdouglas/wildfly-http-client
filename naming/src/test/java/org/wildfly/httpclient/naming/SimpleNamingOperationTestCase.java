@@ -251,7 +251,7 @@ public class SimpleNamingOperationTestCase {
     private InitialContext createContext() throws NamingException {
         Hashtable<String, String> env = new Hashtable<>();
         env.put(Context.INITIAL_CONTEXT_FACTORY, "org.wildfly.naming.client.WildFlyInitialContextFactory");
-        env.put(Context.PROVIDER_URL, HTTPTestServer.getDefaultServerURL());
+        env.put(Context.PROVIDER_URL, HTTPTestServer.getDefaultServerURL() + ";http://127.0.0.1:1");
         return new InitialContext(env);
     }
 
