@@ -136,17 +136,17 @@ public class HttpTargetContext extends AbstractAttachable {
         if (sessionId != null) {
             request.getRequestHeaders().add(Headers.COOKIE, "JSESSIONID=" + sessionId);
         }
-        connectionPool.getConnection(connection -> sendRequestInternal(connection, request, authenticationConfiguration, httpMarshaller, httpResultHandler, failureHandler, expectedResponse, completedTask, false, false), failureHandler::handleFailure, false, sslContext);
+        connectionPool.getConnection(connection -> sendRequestInternal(connection, request, authenticationConfiguration, httpMarshaller, httpResultHandler, failureHandler, expectedResponse, completedTask, false, false, sslContext), failureHandler::handleFailure, false, sslContext);
     }
 
     public void sendRequest(ClientRequest request, SSLContext sslContext, AuthenticationConfiguration authenticationConfiguration, HttpMarshaller httpMarshaller, HttpResultHandler httpResultHandler, HttpFailureHandler failureHandler, ContentType expectedResponse, Runnable completedTask, boolean allowNoContent) {
         if (sessionId != null) {
             request.getRequestHeaders().add(Headers.COOKIE, "JSESSIONID=" + sessionId);
         }
-        connectionPool.getConnection(connection -> sendRequestInternal(connection, request, authenticationConfiguration, httpMarshaller, httpResultHandler, failureHandler, expectedResponse, completedTask, allowNoContent, false), failureHandler::handleFailure, false, sslContext);
+        connectionPool.getConnection(connection -> sendRequestInternal(connection, request, authenticationConfiguration, httpMarshaller, httpResultHandler, failureHandler, expectedResponse, completedTask, allowNoContent, false, sslContext), failureHandler::handleFailure, false, sslContext);
     }
 
-    public void sendRequestInternal(final HttpConnectionPool.ConnectionHandle connection, ClientRequest request, AuthenticationConfiguration authenticationConfiguration, HttpMarshaller httpMarshaller, HttpResultHandler httpResultHandler, HttpFailureHandler failureHandler, ContentType expectedResponse, Runnable completedTask, boolean allowNoContent, boolean retry) {
+    public void sendRequestInternal(final HttpConnectionPool.ConnectionHandle connection, ClientRequest request, AuthenticationConfiguration authenticationConfiguration, HttpMarshaller httpMarshaller, HttpResultHandler httpResultHandler, HttpFailureHandler failureHandler, ContentType expectedResponse, Runnable completedTask, boolean allowNoContent, boolean retry, SSLContext sslContext) {
         try {
             final boolean authAdded = retry || connection.getAuthenticationContext().prepareRequest(connection.getUri(), request, authenticationConfiguration);
 
@@ -174,15 +174,20 @@ public class HttpTargetContext extends AbstractAttachable {
                                 ClientResponse response = result.getResponse();
                                 if (!authAdded || connection.getAuthenticationContext().isStale(result)) {
                                     if (connection.getAuthenticationContext().handleResponse(response)) {
+                                        URI uri = connection.getUri();
+                                        connection.done(false);
                                         final AtomicBoolean done = new AtomicBoolean();
                                         ChannelListener<StreamSourceChannel> listener = ChannelListeners.drainListener(Long.MAX_VALUE, channel -> {
                                             done.set(true);
-                                            if (connection.getAuthenticationContext().prepareRequest(connection.getUri(), request, authenticationConfiguration)) {
-                                                //retry the invocation
-                                                sendRequestInternal(connection, request, authenticationConfiguration, httpMarshaller, httpResultHandler, failureHandler, expectedResponse, completedTask, allowNoContent, true);
-                                            } else {
-                                                failureHandler.handleFailure(HttpClientMessages.MESSAGES.authenticationFailed());
-                                            }
+                                            connectionPool.getConnection((connection) -> {
+                                                if (connection.getAuthenticationContext().prepareRequest(uri, request, authenticationConfiguration)) {
+                                                    //retry the invocation
+                                                    sendRequestInternal(connection, request, authenticationConfiguration, httpMarshaller, httpResultHandler, failureHandler, expectedResponse, completedTask, allowNoContent, true, sslContext);
+                                                } else {
+                                                    failureHandler.handleFailure(HttpClientMessages.MESSAGES.authenticationFailed());
+                                                }
+                                            }, failureHandler::handleFailure, false, sslContext);
+
                                         }, (channel, exception) -> failureHandler.handleFailure(exception));
                                         listener.handleEvent(result.getResponseChannel());
                                         if(!done.get()) {
