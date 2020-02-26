@@ -183,6 +183,10 @@ public class HttpTargetContext extends AbstractAttachable {
                             connection.getConnection().getWorker().execute(() -> {
                                 ClientResponse response = result.getResponse();
                                 if (!authAdded || connection.getAuthenticationContext().isStale(result)) {
+                                    handleSessionAffinity(response);
+                                    if (sessionId != null) {
+                                        request.getRequestHeaders().add(Headers.COOKIE, "JSESSIONID=" + sessionId);
+                                    }
                                     if (connection.getAuthenticationContext().handleResponse(response)) {
                                         URI uri = connection.getUri();
                                         connection.done(false);
@@ -240,16 +244,7 @@ public class HttpTargetContext extends AbstractAttachable {
                                     return;
                                 }
                                 try {
-                                    //handle session affinity
-                                    HeaderValues cookies = response.getResponseHeaders().get(Headers.SET_COOKIE);
-                                    if (cookies != null) {
-                                        for (String cookie : cookies) {
-                                            Cookie c = Cookies.parseSetCookieHeader(cookie);
-                                            if (c.getName().equals(JSESSIONID)) {
-                                                setSessionId(c.getValue());
-                                            }
-                                        }
-                                    }
+                                    handleSessionAffinity(response);
 
                                     if (isException) {
                                         final MarshallingConfiguration marshallingConfiguration = createExceptionMarshallingConfig();
@@ -374,6 +369,19 @@ public class HttpTargetContext extends AbstractAttachable {
                 failureHandler.handleFailure(e);
             } finally {
                 connection.done(true);
+            }
+        }
+    }
+
+    private void handleSessionAffinity(ClientResponse response) {
+        //handle session affinity
+        HeaderValues cookies = response.getResponseHeaders().get(Headers.SET_COOKIE);
+        if (cookies != null) {
+            for (String cookie : cookies) {
+                Cookie c = Cookies.parseSetCookieHeader(cookie);
+                if (c.getName().equals(JSESSIONID)) {
+                    setSessionId(c.getValue());
+                }
             }
         }
     }
